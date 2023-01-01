@@ -114,6 +114,40 @@ class DSRPTV_DB{
 	}
 
 
+	public function get_form_entry( $form_id, $args = array() ){
+
+		$defaults = array(
+			'limit' 	=> 1,
+			'offset' 	=> 0
+		);
+
+		$args = wp_parse_args( $args, $defaults );
+
+		$args['where'][] = array(
+			'key' 		=> 'form_id',
+			'value' 	=> $form_id,
+			'compare' 	=> '='
+		);
+
+		$args['where'][] = array(
+			'key' 		=> 'session_key',
+			'value' 	=> $this->get_current_user_session_key(),
+			'compare' 	=> '='
+		);
+	
+	
+
+		$rows = $this->get_rows( $args );
+
+		if( !empty( $rows ) ){
+			return $rows[0];
+		}
+		
+		return $rows;
+
+	}
+
+
 
 	public function get_rows_by_session_key( $session_key, $session_type = '', $args = array(), $output = OBJECT ){
 		
@@ -200,6 +234,7 @@ class DSRPTV_DB{
 			'session_key' 		=> $this->get_current_user_session_key(),
 			'session_value' 	=> null,
 			'session_type'  	=> 'lead',
+			'form_id' 			=> '',
 			'session_expiry' 	=> strtotime('+30 days'),
 		);
 
@@ -297,6 +332,7 @@ class DSRPTV_DB{
   			session_key char(32) NOT NULL,
 			session_value longtext NOT NULL,
 			session_type char(32),
+			form_id int,
 			session_expiry BIGINT UNSIGNED NOT NULL,
 			PRIMARY KEY  (session_id)
 			) $charset_collate;";

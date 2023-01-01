@@ -22,6 +22,21 @@ class DSRPTV_Form{
 	public function __construct(){
 		add_filter( 'gform_validation_message', array( $this, 'display_form_errors' ), 10, 2 );
 		add_filter( 'gform_validation', array( $this, 'validation' ), 10, 1 );
+		add_filter( 'gform_submit_button', array( $this, 'form_token' ), 10, 2 );
+	}
+
+
+	public function form_token( $html, $form ){
+		if( !$this->is_my_type( $form ) ) return $html;
+		$form_token = isset( $_POST['dsrptv_form_token'] ) ? (int) $_POST['dsrptv_form_token'] : rand(1,999);
+		$html .= '<input type="hidden" name="dsrptv_form_token" value="'.$form_token.'">';
+		return $html;
+	}
+
+
+	public function is_my_type( $form ){
+
+		return ( isset( $form['dsrptv_type'] ) && $form['dsrptv_type'] === $this->type );
 	}
 
 
@@ -30,7 +45,7 @@ class DSRPTV_Form{
 
 		$form = $validation_result['form'];
 
-		if( !isset( $form['dsrptv_type'] ) || $form['dsrptv_type'] !== $this->type ) return $validation_result;
+		if( !$this->is_my_type( $form ) ) return $validation_result;
 
 		$validation_result = $this->validate( $validation_result );
 
@@ -64,7 +79,7 @@ class DSRPTV_Form{
 	}
 
 
-	public function update_session_value( $value ){
+	public function update_session_value( $value, $form_id = '' ){
 
 		$value = is_array( $value ) || is_object( $value ) ? json_encode( $value, true ) : $value;
 
@@ -72,7 +87,8 @@ class DSRPTV_Form{
 
 			array(
 				'session_value' => $value,
-				'session_type' 	=> $this->type
+				'session_type' 	=> $this->type,
+				'form_id' 		=> $form_id
 			)
 
 		);
@@ -102,7 +118,10 @@ class DSRPTV_Form{
 	}
 
 
-	public function post_data_curl( $body ){
+	public function post_data_curl( $body, $form_id = '' ){
+
+		print_r($body);
+		die();
 
 		$postText = wp_json_encode( $body );
 
@@ -131,7 +150,7 @@ class DSRPTV_Form{
 	    }
 
 	    if( isset( $result['client_id'] ) || ( isset( $result['status'] ) && $result['status'] === 'complete' ) ){
-	    	$this->update_session_value( $result );
+	    	$this->update_session_value( $result, $form_id );
 	    }
 
 

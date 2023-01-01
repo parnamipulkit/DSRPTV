@@ -100,35 +100,34 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 		);
 
 
-		// Loop through form fields and fetch field values from POST if available.
-		foreach ( $this->fields as $field ) {
+		foreach ( $formFields as $field ) {
 
-			$fieldID = $field['id'];
+			$fieldID = $field->id;
 
-			$formFieldID = 'input_' . $fieldID;
+			if( !empty( $field->inputs ) ){
 
-			if( isset( $_POST[ $formFieldID ] ) ){
-				$body[ $field['dsrptvAPIParam'] ] = rgpost( $formFieldID );
-			}
+				foreach( $field->inputs as $subinput ) {
 
-			if( isset( $field['inputs'] ) ){
+					$subInputID = $subinput['id'];
 
-
-				foreach( $field['inputs'] as $subinput ) {
-
-					$subInputFieldID = $subinput['id'];
-
-					$subInputFormFieldID = 'input_' . str_replace('.', '_', $subInputFieldID );
-
-					if( isset( $_POST[ $subInputFormFieldID ] ) ){
-						$body[ $subinput['dsrptvAPIParam'] ] = rgpost( $subInputFormFieldID );
-					}
+					$subInputFormFieldID = 'input_'. str_replace( '.', '_',  $subInputID );
+		
+					$value = esc_html( rgpost( $subInputFormFieldID ) );
+		
+					$body[ $subinput['dsrptvAPIParam'] ] = $value;
+					
 				}
+
+			}
+			else{
+
+				$value = rgpost( 'input_'. $fieldID );
+
+				$body[ $field->dsrptvAPIParam ] = $value;
 
 			}
 
 		}
-
 
 
 		//Do certain checks and follow API data type before sending
@@ -153,8 +152,7 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 
 		}
 
-
-		$result = $this->post_data_curl( $body );
+		$result = $this->post_data_curl( $body, $form['id'] );
 
 	    $validation_result['form'] = $form;
 

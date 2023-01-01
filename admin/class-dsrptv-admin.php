@@ -47,15 +47,15 @@ class DSRPTV_Admin{
 			'adminurl'  => admin_url().'admin-ajax.php',
 			'forms' 	=> array(
 				'upsell' => array(
-					'text' 	=> __( 'Add upsell form', 'xt' ),
+					'text' 	=> __( 'DSRPTV Add upsell form', 'xt' ),
 					'url' 	=> add_query_arg( 'dsprtv_createform', 'upsell' ),
 				),
 				'order' => array(
-					'text' 	=> __( 'Add order form', 'xt' ),
+					'text' 	=> __( 'DSRPTV Add order form', 'xt' ),
 					'url' 	=> add_query_arg( 'dsprtv_createform', 'order' ),
 				),
 				'lead' => array(
-					'text' 	=> __( 'Add lead form', 'xt' ),
+					'text' 	=> __( 'DSRPTV Add lead form', 'xt' ),
 					'url' 	=> add_query_arg( 'dsprtv_createform', 'lead' ),
 				),
 			)

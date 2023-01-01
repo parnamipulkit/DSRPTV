@@ -29,7 +29,7 @@ class DSRPTV_Forms{
 	 * Hooks
 	*/
 	public function hooks(){
-		
+		add_shortcode( 'dsrptv_form_data', array( $this, 'shortcode_form_data' ) );
 	}
 
 
@@ -72,6 +72,45 @@ class DSRPTV_Forms{
 						return $subinput;
 					}
 				}
+			}
+
+		}
+
+	}
+
+
+	public function shortcode_form_data( $atts ){
+
+		$atts = shortcode_atts( array(
+			'type' 	=> 'order',
+			'id' 	=> '',
+			'key' 	=> ''
+		), $atts, 'dsrptv_form_data');
+
+		if( $atts['id'] ){
+			$form_row = dsrptv_db()->get_form_entry( $atts['id'] );
+		}
+		else{
+			$form_row = dsrptv_db()->get_row_by_session_type( $atts['type'] );
+		}
+
+		if( empty( $form_row ) ) return '';
+
+		$key = $atts['key'];
+
+		if( !$key ){
+			return $form_row->session_value;
+		}
+		else{
+
+			$entry = json_decode( $form_row->session_value, true );
+
+			if( isset( $entry[ $key ] ) ){
+
+				$value = $entry[ $key ];
+
+				return is_array( $value ) ? json_encode( $value ) : $value;
+
 			}
 
 		}
