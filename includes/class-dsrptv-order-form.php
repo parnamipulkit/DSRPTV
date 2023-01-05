@@ -14,6 +14,7 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 		$this->type 	= 'order';
 		$this->fields 	= include DSRPTV_PATH.'/forms/order.php';
 		$this->url 		= 'https://dev.dsrptv.io/api/v1/orders/create';
+		$this->microurl = 'https://dev.dsrptv.io/api/v1//micros/create';
 
 		$this->hooks();
 
@@ -30,7 +31,36 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 		add_action( 'gform_form_settings_fields', array( $this, 'form_settings' ), 10, 2 );
 		add_filter( 'gform_tooltips', array( $this, 'add_tooltip' ) );
 		add_filter( 'gform_confirmation', array( $this, 'add_query_args_to_redirection' ), 10, 3 );
+		add_action( 'gform_enqueue_scripts', array( $this, 'enqueue_scripts' ) );
+		add_filter( 'gform_pre_validation', array( $this, 'filter_form_values_before_submit' ) );
 	}
+
+
+	public function enqueue_scripts( $form ){
+		if( $this->is_my_type( $form ) ){
+			wp_enqueue_script( 'gform_masked_input' );
+		}
+		return $form;
+	}
+
+
+	public function filter_form_values_before_submit( $form ){
+		
+
+		foreach ( $form['fields'] as $field ) {
+
+			$fieldID = $field->id;
+
+			//Removing input mask from credit card number
+			if( $field->type === 'creditcard' ){
+				$cardNumberID = 'input_'.$fieldID.'_1';
+				$_POST[ $cardNumberID ] = str_replace('-', '', rgpost( $cardNumberID ) );
+			}
+		}
+
+		return $form;
+		
+	} 
 
 
 
@@ -117,7 +147,7 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 
 		$form = $validation_result['form'];
 
-		if( !isset( $form['dsrptv_type'] ) || $form['dsrptv_type'] !== $this->type ) return $validation_result;
+		if( !$this->is_my_type( $form ) ) return $validation_result;
 
 		$leadID 	= dsrptv_lead_form()->get_session_data_property('id');
 		$funnelID 	= dsrptv_lead_form()->get_session_data_property('funnel_id');
@@ -132,7 +162,6 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 		$formFields = $form['fields'];
 
 		$body = array(
-			'key' 				=> dsrptv()->get_general_option('api-key'),
 			'ip_address' 		=> dsrptv()->getIP(),
 			'lead_id'			=> $leadID,
 			'funnel_id' 		=> $funnelID,
@@ -146,7 +175,6 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 			$fieldID = $field->id;
 
 			if( !empty( $field->inputs ) ){
-
 
 				foreach( $field->inputs as $subinput ) {
 
@@ -171,8 +199,12 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 					else{
 						$value = esc_html( rgpost( $subInputFormFieldID ) );
 					}
-		
-					$body[ $subinput['dsrptvAPIParam'] ] = $value;
+
+
+					$apiParam = isset( $subinput['dsrptvAPIParam'] ) ? $subinput['dsrptvAPIParam'] : $field->dsrptvAPIParam;
+
+
+					$body[ $apiParam ] = $value;
 					
 				}
 
@@ -188,19 +220,42 @@ class DSRPTV_Order_Form extends DSRPTV_Form {
 					$body[ $field->dsrptvAPIParam ] = $value;
 				}		
 			}
+
 		}
 
 
 		//clean up data before passing to API
-		$body['card_exp_month'] = sprintf( "%02d", $body['card_exp_month'] );
-		$body['card_exp_year'] = substr( $body['card_exp_year'], -2 );
+		$body['card_exp_month'] 	= sprintf( "%02d", $body['card_exp_month'] );
+		$body['card_exp_year'] 		= substr( $body['card_exp_year'], -2 );
 
+		$result = $this->post_data_curl( $body );
 
-		$result = $this->post_data_curl( $body, $form['id'] );
+		if( isset( $result['status'] ) && $result['status'] === 'complete' ){
+
+	    	$this->save_api_success_response( $result, $form['id'] );
+
+	    	if( isset( $body['micro_product_id'] ) && $body['micro_product_id'] ){
+
+	    		$this->create_micro_transaction( $body['micro_product_id'], $result['id'], $form['id'] );
+	    	}
+
+	    }
 
 	    $validation_result['form'] = $form;
 
 	    return $validation_result;
+
+	}
+
+
+	public function create_micro_transaction( $product_id, $order_id, $form_id = '' ){
+
+		$body = array(
+			'product_id' 	=> $product_id,
+			'order_id' 		=> $order_id
+		);
+
+		$result = $this->post_data_curl( $body, $this->microurl );
 
 	}
 

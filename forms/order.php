@@ -60,6 +60,23 @@ $fields = array(
     ),
 
 
+    array(
+        'id'                    => 3,
+        'type'                  => 'checkbox',
+        'label'                 => __( 'Micro Transaction', 'dsrptv' ),
+        'dsrptvAPIParam'        => 'micro_product_id',
+        'adminOnly'             => true,
+        'enableChoiceValue '    => true,
+        'choices'               => array(
+            array(
+                'text'          => __( 'I want fast shipping', 'dsrptv' ),
+                'value'         => 1,
+                'isSelected'    => false
+            )
+        )
+    )
+
+
 );
 
 return $fields;

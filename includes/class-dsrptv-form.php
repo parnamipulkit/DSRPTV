@@ -21,9 +21,11 @@ class DSRPTV_Form{
 
 	public function __construct(){
 		add_filter( 'gform_validation_message', array( $this, 'display_form_errors' ), 10, 2 );
-		add_filter( 'gform_validation', array( $this, 'validation' ), 10, 1 );
+		add_filter( 'gform_validation', array( $this, 'validation' ), 9999, 1 );
 		add_filter( 'gform_submit_button', array( $this, 'form_token' ), 10, 2 );
+		add_action( 'gform_pre_render', array( $this, 'fetch_params' ) );
 	}
+
 
 
 	public function form_token( $html, $form ){
@@ -37,6 +39,48 @@ class DSRPTV_Form{
 	public function is_my_type( $form ){
 
 		return ( isset( $form['dsrptv_type'] ) && $form['dsrptv_type'] === $this->type );
+	}
+
+
+	//Fill form fields if values are passed in URL
+	public function fetch_params( $form ){
+
+		if( empty( $_GET ) || isset( $_POST['gform_submit'] ) || !$this->is_my_type( $form ) ) return $form;
+
+		//Loop form fields
+		foreach ( $form['fields'] as $field ) {
+
+			if( !empty( $field->inputs ) ){
+
+				foreach ( $field->inputs as $index => $input ) {
+
+					if( !isset( $input['dsrptvAPIParam'] ) ) continue;
+
+					$apiParam = $input['dsrptvAPIParam'];
+
+					if( !isset( $_GET[ $apiParam ] ) || !$_GET[ $apiParam ] ) continue;
+
+					
+					($field->inputs)[ $index ]['defaultValue'] = esc_html( $_GET[ $apiParam ] );		
+		
+				}
+
+			}
+			else{
+
+				$apiParam = $field->dsrptvAPIParam;
+
+				if( !isset( $_GET[ $apiParam ] ) || !$_GET[ $apiParam ] ) continue;
+
+				$field->defaultValue = esc_html(  $_GET[ $apiParam ] );
+
+			}
+
+			
+
+		}
+
+		return $form;
 	}
 
 
@@ -79,7 +123,7 @@ class DSRPTV_Form{
 	}
 
 
-	public function update_session_value( $value, $form_id = '' ){
+	public function save_api_success_response( $value, $form_id = '' ){
 
 		$value = is_array( $value ) || is_object( $value ) ? json_encode( $value, true ) : $value;
 
@@ -118,16 +162,18 @@ class DSRPTV_Form{
 	}
 
 
-	public function post_data_curl( $body, $form_id = '' ){
+	public function post_data_curl( $body, $url = '' ){
 
-		print_r($body);
-		die();
+		$body['key'] = dsrptv()->get_general_option('api-key');
 
 		$postText = wp_json_encode( $body );
 
 		$curl = curl_init();
 
-	    curl_setopt($curl, CURLOPT_URL, $this->url);
+		$url = $url ? $url : $this->url;
+
+
+	    curl_setopt($curl, CURLOPT_URL, $url );
 	    curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
 	    curl_setopt($curl, CURLOPT_POST, true);
 	    curl_setopt($curl, CURLOPT_POSTFIELDS, $postText);
@@ -137,6 +183,7 @@ class DSRPTV_Form{
 	        "accept: application/json",
 	        "content-type: application/json",
 	    ));
+
 
 	    $result = json_decode( curl_exec($curl), true );
 
@@ -148,11 +195,6 @@ class DSRPTV_Form{
 	    if( isset( $result['reason'] ) ){
 	    	$this->errors[] = $result['reason'];
 	    }
-
-	    if( isset( $result['client_id'] ) || ( isset( $result['status'] ) && $result['status'] === 'complete' ) ){
-	    	$this->update_session_value( $result, $form_id );
-	    }
-
 
 	    return $result;
 
@@ -179,6 +221,8 @@ class DSRPTV_Form{
     		if( isset( $fieldObj->inputs ) && !empty( $fieldObj->inputs ) ){
 
     			foreach ( $fieldObj->inputs as $subinput ) {
+
+    				if( !isset( $subinput['dsrptvAPIParam'] ) ) continue;
 
     				$subApiParam 	= $subinput['dsrptvAPIParam'];
     				$subFieldID 	= $subinput['id'];

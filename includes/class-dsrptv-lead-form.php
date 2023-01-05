@@ -82,10 +82,9 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 
 	public function validate( $validation_result ){
 
-	
 		$form = $validation_result['form'];
 
-		if( !isset( $form['dsrptv_type'] ) || $form['dsrptv_type'] !== $this->type ) return $validation_result;
+		if( !$this->is_my_type( $form ) ) return $validation_result;
 
 		if( !isset( $form['funnel_id'] ) || !$form['funnel_id'] ){
 			die('No funnel ID found, please add funnel id in form settings');
@@ -94,7 +93,6 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 		$formFields = $form['fields'];
 
 		 $body = array(
-			'key' 			=> dsrptv()->get_general_option('api-key'),
 			'funnel_id' 	=> $form['funnel_id'],
 			'ip_address' 	=> dsrptv()->getIP()
 		);
@@ -114,7 +112,9 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 		
 					$value = esc_html( rgpost( $subInputFormFieldID ) );
 		
-					$body[ $subinput['dsrptvAPIParam'] ] = $value;
+					$apiParam = isset( $subinput['dsrptvAPIParam'] ) ? $subinput['dsrptvAPIParam'] : $field->dsrptvAPIParam;
+		
+					$body[ $apiParam ] = $value;
 					
 				}
 
@@ -152,7 +152,13 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 
 		}
 
-		$result = $this->post_data_curl( $body, $form['id'] );
+		$result = $this->post_data_curl( $body );
+
+		if(  isset( $result['client_id'] ) ){
+
+	    	$this->save_api_success_response( $result, $form['id'] );
+
+	    }
 
 	    $validation_result['form'] = $form;
 
@@ -163,7 +169,7 @@ class DSRPTV_Lead_Form extends DSRPTV_Form{
 	/* If user already has created lead, fetch the values from db and prefill form */
 	public function autofill_form( $form ){
 
-		if( !isset( $form['dsrptv_type'] ) || $form['dsrptv_type'] !== $this->type ) return $form;
+		if( isset( $_POST['gform_submit'] ) || !isset( $form['dsrptv_type'] ) || $form['dsrptv_type'] !== $this->type ) return $form;
 
 		$leadData = $this->get_session_data();
 

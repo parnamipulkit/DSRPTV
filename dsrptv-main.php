@@ -191,3 +191,32 @@ function dsrptv_get_canadian_state_code( $state_name ){
 
 //Enable credit card field
 add_filter( 'gform_enable_credit_card_field', '__return_true', 11 );
+
+
+//Credit card input mask
+add_action( 'wp_footer', function(){
+	?>
+	<script type="text/javascript">
+		jQuery(document).ready(function($){
+
+			var position = 0,
+				previousmask = '';
+
+			$('.gform_card_icon_container + input').on('keyup', function(){
+
+				var $selectedCard 	= $('.gform_card_icon_selected'),
+					mask 			= $selectedCard.hasClass('gform_card_icon_amex') ? "9999-999999-99999" : "9999-9999-9999-9999" ;
+
+				position = $(this).caret().begin;
+
+				if( mask !== previousmask ){
+					$(this).mask(mask,{autoclear: false});
+					$(this).prop('selectionStart', position);
+				}
+
+			}).trigger('change');
+
+		})
+	</script>
+	<?php
+} );

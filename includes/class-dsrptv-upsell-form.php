@@ -68,7 +68,7 @@ class DSRPTV_Upsell_Form extends DSRPTV_Form{
 	
 		$form = $validation_result['form'];
 
-		if( !isset( $form['dsrptv_type'] ) || $form['dsrptv_type'] !== $this->type ) return $validation_result;
+		if( !$this->is_my_type( $form ) ) return $validation_result;
 
 		$formFields = $form['fields'];
 
@@ -79,7 +79,6 @@ class DSRPTV_Upsell_Form extends DSRPTV_Form{
 		}
 
 		$body = array(
-			'key' 		=> dsrptv()->get_general_option('api-key'),
 			'order_id' 	=> $order_id
 		);
 
@@ -104,9 +103,13 @@ class DSRPTV_Upsell_Form extends DSRPTV_Form{
 		
 		}
 
+		$result = $this->post_data_curl( $body );
 
+		if(  isset( $result['status'] ) && $result['status'] === 'complete' ){
 
-		$result = $this->post_data_curl( $body, $form['id'] );
+	    	$this->save_api_success_response( $result, $form['id'] );
+
+	    }
 
 	    $validation_result['form'] = $form;
 
